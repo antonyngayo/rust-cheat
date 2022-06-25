@@ -1,6 +1,9 @@
-use std::{io, path::{PathBuf, Path},fs};
+use std::{io::{self, stdin}, path::{PathBuf, Path},fs, vec};
 
 use clap::{Parser, Subcommand};
+
+
+mod configuration;
 
 /// simple program to record cheatsheets
 #[derive(Parser, Debug)]
@@ -41,8 +44,11 @@ impl FileNames {
 }
 
 fn main() -> Result<(), io::Error>{
+    let mut config = configuration::Config::new();
     match create_config(){
-        (true, path) => println!("Config: {:?}", &path.to_string_lossy().to_string().replace("\"", "")),
+        (true, path) => {
+            config.config_path = path.to_string_lossy().to_string().to_owned(); // setting the config path to be written to disk soon
+        },
         (false, _) => eprintln!("An error occured while creating config file")
     }
 
@@ -50,6 +56,7 @@ fn main() -> Result<(), io::Error>{
     let binaries = vec!["nano", "vi","vim", "nvim"];
     let args = Cli::parse();
     let mut files = read_files()?; // getting the whole list of files in the directory OR an error
+    let mut selector = vec![];
     match args.command {
         Commands::L {  } => { 
             files.sort();
@@ -61,13 +68,30 @@ fn main() -> Result<(), io::Error>{
             eprintln!("{}", name)
         },
         Commands::E { name } => {
-        for bin in binaries {
-            match Path::new(&binary_base_path).join(bin).exists() {
-                true => { eprintln!("Binary {} exists", &bin)},
-                false => {continue;}
+            // if !files.contains(name) {
+            //     eprintln!("The file does not exist");
+            // }
+            match config.editor_path {
+                Some(path) => {eprintln!("We have a path {:?}", path)},
+                None => { 
+                    let mut editor_selection = String::new();
+                    check_for_editor(binaries, &binary_base_path, &mut selector);
+                    println!("Please select an editor");
+                    for (index, editor) in selector.iter().enumerate() {
+                        println!("{}) {:?} ", index, editor);
+                    }
+                    let mut editor_index = 0;
+                    stdin().read_line(&mut editor_selection).ok().expect("An error occurred while capturing input");
+                    match editor_selection.trim().parse::<usize>() {
+                        Ok(num) => { editor_index = num },
+                        Err(e) => eprintln!("An error occurred during casting: {}", e)
+                    }
+                    println!("You selected {}", editor_index);
+                    config.editor_path = Some(selector[editor_index].clone()); // setting the editor
+                    println!("{:?}", &config);
+                }
             }
-        }
-            eprintln!("{}", name)
+            eprintln!("{}", name);
         },
         Commands::S { term } => {
             eprintln!("{}", term)
@@ -109,14 +133,25 @@ fn create_config() -> (bool, PathBuf) {
     // creating a config file for the cheat binary 
     let home_dir = dirs::home_dir().unwrap();
     match Path::new(&home_dir).join(".cheat.config").exists(){
-        true => { return (true, Path::new(&home_dir).join(".cheat.config")) },
+        true => { return (true, Path::new(&home_dir).join(".cheat.json")) },
         false => {
-            let path =  Path::new(&home_dir).join(".cheat.config");
+            let path =  Path::new(&home_dir).join(".cheat.json");
             let res = fs::File::create(path);
             match res {
-                Ok(_) => return (true, Path::new(&home_dir).join(".cheat.config")),
+                Ok(_) => return (true, Path::new(&home_dir).join(".cheat.json")),
                 Err(_) => return (false, PathBuf::new())
             }
         },
     };
+}
+
+fn check_for_editor(binaries: Vec<&str>, binary_base_path: &PathBuf, selector: &mut Vec<PathBuf>){
+    for bin in binaries {
+        match Path::new(&binary_base_path).join(bin).exists() {
+            true => {
+                selector.push(binary_base_path.join(bin));
+            },
+            false => {continue;}
+        }
+    }
 }
