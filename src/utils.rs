@@ -2,6 +2,8 @@ use std::{path::{Path, PathBuf}, fs, collections::HashMap, io};
 
 use unicase::UniCase;
 
+use crate::configuration::Config;
+
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord)] // this allows the structure to be Order-able and
 pub struct FileNames {
     pub name: String,
@@ -43,14 +45,16 @@ pub fn read_files(cheat_folder: PathBuf) -> Result<HashMap<UniCase<String>, File
 
 
 // create a config file
-pub fn create_config() -> (bool, PathBuf) {
+pub fn create_config(config: &Config) -> (bool, PathBuf) {
     // creating a config file for the cheat binary 
     let home_dir = dirs::home_dir().unwrap();
-    match Path::new(&home_dir).join(".cheat.config").exists(){
+    match Path::new(&home_dir).join(".cheat.json").exists(){
         true => { return (true, Path::new(&home_dir).join(".cheat.json")) },
         false => {
             let path =  Path::new(&home_dir).join(".cheat.json");
-            let res = fs::File::create(path);
+            let res = fs::File::create(&path);
+            // filling the config file with the initial configurations so the file has something
+            fs::write(path, serde_json::to_string_pretty(&config).unwrap()).unwrap();
             match res {
                 Ok(_) => return (true, Path::new(&home_dir).join(".cheat.json")),
                 Err(_) => return (false, PathBuf::new())

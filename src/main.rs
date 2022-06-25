@@ -1,10 +1,13 @@
-use std::{io::{self, stdin}, path::{PathBuf, Path},vec, process::exit};
+use std::{io::{self, stdin}, path::{PathBuf, Path},vec, process::exit, fs};
 use clap::{Parser, Subcommand};
+use serde_json::Value;
 use unicase::UniCase; // this helps with case insensitivity
 mod configuration;
 mod utils;
 
 use utils::{create_config, check_for_editor, perform_edit, read_files};
+
+use crate::configuration::Config;
 
 /// simple program to record cheatsheets
 #[derive(Parser, Debug)]
@@ -34,9 +37,18 @@ enum Commands {
 }
 fn main() -> Result<(), io::Error>{
     let mut config = configuration::Config::new();
-    match create_config(){
+    match create_config(&config){
         (true, path) => {
+            // loading configs into program
+            match fs::read_to_string(&path) {
+                Ok(content) => {
+                    let conf_text: Config = serde_json::from_str(&content).unwrap();
+                    println!("{:?}", conf_text.config_path);
+                },
+                Err(_) => eprintln!("The config file is empty")
+            }
             config.config_path = path.to_string_lossy().to_string().to_owned(); // setting the config path to be written to disk soon
+            fs::write(path, serde_json::to_string_pretty(&config).unwrap()).unwrap();
         },
         (false, _) => eprintln!("An error occured while creating config file")
     }
@@ -55,8 +67,8 @@ fn main() -> Result<(), io::Error>{
 
     let mut selector = vec![];
 
-
-    match config.editor_path.clone() {
+    // I need to think whether `Option` was the best choice for this part
+    match &config.editor_path {
         Some(path) => {eprintln!("We have a path {:?}", path)},
         None => { 
             let mut editor_selection = String::new();
@@ -71,9 +83,8 @@ fn main() -> Result<(), io::Error>{
                 Ok(num) => { editor_index = num },
                 Err(e) => eprintln!("An error occurred during casting: {}", e)
             }
-            // println!("You selected {}", editor_index);
             config.editor_path = Some(selector[editor_index].clone()); // setting the editor
-            println!("{:?}", &config);
+            fs::write(&config.config_path, serde_json::to_string_pretty(&config).unwrap()).unwrap();
         }
     }
 
