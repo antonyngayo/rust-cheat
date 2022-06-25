@@ -1,6 +1,7 @@
-use std::{io::{self, stdin}, path::{PathBuf, Path},fs, vec};
+use std::{io::{self, stdin}, path::{PathBuf, Path},fs, vec, collections::HashMap, process::exit, ffi::{OsStr, OsString}};
 
 use clap::{Parser, Subcommand};
+use unicase::UniCase; // this helps with case insensitivity
 
 
 mod configuration;
@@ -55,23 +56,32 @@ fn main() -> Result<(), io::Error>{
     let binary_base_path = PathBuf::from("/usr/bin/");
     let binaries = vec!["nano", "vi","vim", "nvim"];
     let args = Cli::parse();
-    let mut files = read_files()?; // getting the whole list of files in the directory OR an error
+
+    // global cheat path
+    let home_dir = dirs::home_dir().unwrap();
+    let cheat_folder = Path::new(&home_dir).join(".cheat");
+
+
+    let mut files = read_files(cheat_folder)?; // getting the whole list of files in the directory OR an error
+
     let mut selector = vec![];
     match args.command {
         Commands::L {  } => { 
-            files.sort();
-            for file in files {
-                println!("{:indent$} {}", &file.name, &file.path.to_string(), indent=40);
+            // let files_content = files.drain();
+            // files.sort();
+            for file in files.drain() {
+                println!("{:indent$} {}", &file.1.name, &file.1.path.to_string(), indent=40);
             }
         },
         Commands::D { name } => {
             eprintln!("{}", name)
         },
         Commands::E { name } => {
-            // if !files.contains(name) {
-            //     eprintln!("The file does not exist");
-            // }
-            match config.editor_path {
+            if !files.contains_key(&UniCase::new(name.clone())) {
+                eprintln!("The file `{}` does not exist", &name);
+                exit(1);
+            }
+            match config.editor_path.clone() {
                 Some(path) => {eprintln!("We have a path {:?}", path)},
                 None => { 
                     let mut editor_selection = String::new();
@@ -86,12 +96,15 @@ fn main() -> Result<(), io::Error>{
                         Ok(num) => { editor_index = num },
                         Err(e) => eprintln!("An error occurred during casting: {}", e)
                     }
-                    println!("You selected {}", editor_index);
+                    // println!("You selected {}", editor_index);
                     config.editor_path = Some(selector[editor_index].clone()); // setting the editor
                     println!("{:?}", &config);
                 }
             }
-            eprintln!("{}", name);
+
+            // eprintln!("{}", name);
+            let p = &files.get(&UniCase::new(name)).unwrap().path;
+            perform_edit(&config.editor_path.unwrap(), PathBuf::from(p));
         },
         Commands::S { term } => {
             eprintln!("{}", term)
@@ -102,14 +115,14 @@ fn main() -> Result<(), io::Error>{
 }
 
 
-fn read_files() -> Result<Vec<FileNames>, io::Error> { // returning a vector on success or an error on failure 
+fn read_files(cheat_folder: PathBuf) -> Result<HashMap<UniCase<String>, FileNames>, io::Error> { // returning a vector on success or an error on failure 
     // setting home dir as global variable
     let home_dir = dirs::home_dir().unwrap();
     // create a path to .cheat 
-    let cheat_path = match Path::new(&home_dir).join(".cheat").exists() {
+    let cheat_path = match &cheat_folder.exists() {
         true => Path::new(&home_dir).join(".cheat"), // setting the path appropriately
         false => {
-            let res = fs::create_dir(Path::new(&home_dir).join(".cheat"));
+            let res = fs::create_dir(&cheat_folder);
             match res {
                 // if successful, we have created the .chat folder
                 Ok(_) => Path::new(&home_dir).join(".cheat"),
@@ -119,9 +132,13 @@ fn read_files() -> Result<Vec<FileNames>, io::Error> { // returning a vector on 
         }
     };
     let target_folder = std::fs::read_dir(cheat_path)?; // passing the `.cheat` psth to be read and enumerated
-    let mut res = vec![]; // declaring the vec object
-    for file in target_folder{  
-        res.push(FileNames::new(file?.path())); // pushing the paths into the vector
+    let mut res = HashMap::new(); // declaring the vec object
+
+    // name to be used as key in the hashmap
+
+    for (_, file) in target_folder.enumerate(){  
+        let hname = file.as_ref().unwrap().path().to_string_lossy().split("/").last().unwrap().to_string();
+        res.insert(UniCase::new(hname), FileNames::new(file.unwrap().path())); // pushing the paths into the vector
     }
     return Ok(res);
 }
@@ -154,4 +171,11 @@ fn check_for_editor(binaries: Vec<&str>, binary_base_path: &PathBuf, selector: &
             false => {continue;}
         }
     }
+}
+
+fn perform_edit(binary: &PathBuf, file_path: PathBuf) {
+    let w = binary.to_string_lossy().to_string().to_owned();
+    let bin = OsString::from(w);
+
+    std::process::Command::new(bin).arg(file_path).output().expect("An error occured while performing edit");
 }
