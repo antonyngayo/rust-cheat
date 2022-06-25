@@ -1,6 +1,6 @@
 use std::{io::{self, stdin}, path::{PathBuf, Path},vec, process::exit, fs};
 use clap::{Parser, Subcommand};
-use serde_json::Value;
+use serde_json;
 use unicase::UniCase; // this helps with case insensitivity
 mod configuration;
 mod utils;
