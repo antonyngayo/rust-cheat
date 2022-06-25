@@ -1,11 +1,10 @@
-use std::{io::{self, stdin}, path::{PathBuf, Path},fs, vec, collections::HashMap, process::exit};
-
-
+use std::{io::{self, stdin}, path::{PathBuf, Path},vec, process::exit};
 use clap::{Parser, Subcommand};
 use unicase::UniCase; // this helps with case insensitivity
-
-
 mod configuration;
+mod utils;
+
+use utils::{create_config, check_for_editor, perform_edit, read_files};
 
 /// simple program to record cheatsheets
 #[derive(Parser, Debug)]
@@ -16,7 +15,7 @@ struct Cli {
     command: Commands
 }
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Subcommand )]
 enum Commands {
     /// Subcommand for listing everything in the .cheat folder
     L {},
@@ -33,18 +32,6 @@ enum Commands {
         term: String
     },
 }
-
-#[derive(Debug, Eq, PartialEq, PartialOrd, Ord)] // this allows the structure to be Order-able and
-struct FileNames {
-    name: String,
-    path: String
-}
-impl FileNames {
-    fn new(p: PathBuf) -> Self {
-        Self { name: p.to_string_lossy().split("/").last().unwrap().to_string(), path: p.to_string_lossy().to_string() }
-    }
-}
-
 fn main() -> Result<(), io::Error>{
     let mut config = configuration::Config::new();
     match create_config(){
@@ -55,7 +42,7 @@ fn main() -> Result<(), io::Error>{
     }
 
     let binary_base_path = PathBuf::from("/usr/bin/");
-    let binaries = vec!["nano", "vi","vim", "nvim"];
+    let binaries = vec!["nano", "vi","vim", "nvim", "emacs", "ee"];
     let args = Cli::parse();
 
 
@@ -116,69 +103,4 @@ fn main() -> Result<(), io::Error>{
 
     }
     Ok(())
-}
-
-
-fn read_files(cheat_folder: PathBuf) -> Result<HashMap<UniCase<String>, FileNames>, io::Error> { // returning a vector on success or an error on failure 
-    // setting home dir as global variable
-    let home_dir = dirs::home_dir().unwrap();
-    // create a path to .cheat 
-    let cheat_path = match &cheat_folder.exists() {
-        true => Path::new(&home_dir).join(".cheat"), // setting the path appropriately
-        false => {
-            let res = fs::create_dir(&cheat_folder);
-            match res {
-                // if successful, we have created the .chat folder
-                Ok(_) => Path::new(&home_dir).join(".cheat"),
-                // an error occured and we set an empty path
-                Err(_) => { PathBuf::new() }
-            }
-        }
-    };
-    let target_folder = std::fs::read_dir(cheat_path)?; // passing the `.cheat` psth to be read and enumerated
-    let mut res = HashMap::new(); // declaring the vec object
-
-    // name to be used as key in the hashmap
-
-    for (_, file) in target_folder.enumerate(){  
-        let hname = file.as_ref().unwrap().path().to_string_lossy().split("/").last().unwrap().to_string();
-        res.insert(UniCase::new(hname), FileNames::new(file.unwrap().path())); // pushing the paths into the vector
-    }
-    return Ok(res);
-}
-
-
-// create a config file
-
-fn create_config() -> (bool, PathBuf) {
-    // creating a config file for the cheat binary 
-    let home_dir = dirs::home_dir().unwrap();
-    match Path::new(&home_dir).join(".cheat.config").exists(){
-        true => { return (true, Path::new(&home_dir).join(".cheat.json")) },
-        false => {
-            let path =  Path::new(&home_dir).join(".cheat.json");
-            let res = fs::File::create(path);
-            match res {
-                Ok(_) => return (true, Path::new(&home_dir).join(".cheat.json")),
-                Err(_) => return (false, PathBuf::new())
-            }
-        },
-    };
-}
-
-fn check_for_editor(binaries: Vec<&str>, binary_base_path: &PathBuf, selector: &mut Vec<PathBuf>){
-    for bin in binaries {
-        match Path::new(&binary_base_path).join(bin).exists() {
-            true => {
-                selector.push(binary_base_path.join(bin));
-            },
-            false => {continue;}
-        }
-    }
-}
-
-fn perform_edit(binary: &PathBuf, file_path: PathBuf) {
-    let _ = std::process::Command::new(binary).args(&[
-        &file_path.to_string_lossy().as_ref()
-        ]).spawn().expect("An error occured while performing edit").wait();
 }
