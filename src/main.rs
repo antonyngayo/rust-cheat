@@ -1,5 +1,5 @@
-use std::{io::{self, stdin}, path::{PathBuf, Path},fs, vec, collections::HashMap, process::exit, ffi::{OsString}};
-use std::io::{Write};
+use std::{io::{self, stdin}, path::{PathBuf, Path},fs, vec, collections::HashMap, process::exit};
+
 
 use clap::{Parser, Subcommand};
 use unicase::UniCase; // this helps with case insensitivity
@@ -178,11 +178,7 @@ fn check_for_editor(binaries: Vec<&str>, binary_base_path: &PathBuf, selector: &
 }
 
 fn perform_edit(binary: &PathBuf, file_path: PathBuf) {
-    let w = binary.to_string_lossy().to_string().to_owned();
-    let bin = OsString::from(w);
-
-    let cmd = std::process::Command::new(bin).args(&[
+    let _ = std::process::Command::new(binary).args(&[
         &file_path.to_string_lossy().as_ref()
-        ]).output().expect("An error occured while performing edit");
-    std::io::stdout().write_all(&cmd.stderr).unwrap();
+        ]).spawn().expect("An error occured while performing edit").wait();
 }
