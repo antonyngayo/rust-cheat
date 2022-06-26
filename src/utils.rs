@@ -78,6 +78,12 @@ pub fn perform_edit(binary: &PathBuf, file_path: PathBuf) {
         &file_path.to_string_lossy().as_ref()
         ]).spawn().expect("An error occured while performing edit").wait();
 }
+// open the files using the chosen editor; bash does the terminal spawning under the hood
+pub fn perform_text_dump(file_path: &PathBuf) -> String {
+    let content = fs::read_to_string(&file_path).unwrap();
+    return content
+}
+
 // allows user to choose the editor of their choice and saves it in the config file
 pub fn choose_editor(binaries: Vec<&str>, binary_base_path: &PathBuf, selector: &mut Vec<PathBuf>, config: &mut Config) {
     let mut editor_selection = String::new();
