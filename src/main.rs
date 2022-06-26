@@ -15,7 +15,7 @@ fn main() -> Result<(), io::Error>{
     let mut config = configuration::Config::new();
     let home_dir = dirs::home_dir().unwrap();
     let cheat_folder = Path::new(&home_dir).join(".cheat");
-    let mut files = read_files(&cheat_folder)?; // getting the whole list of files in the directory OR an error
+    let files = read_files(&cheat_folder)?; // getting the whole list of files in the directory OR an error
     let mut selector = vec![];
     let binary_base_path = PathBuf::from("/usr/bin/");
     let binaries = vec!["nano", "vi","vim", "nvim", "emacs", "ee"];
@@ -57,7 +57,7 @@ fn main() -> Result<(), io::Error>{
         for file in &files { // looping through HashMap contents
             println!("{:indent$} {}", &file.1.name, &file.1.path.to_string(), indent=40);
         }
-    }else if cli_args[1] == "-s" && cli_args.len() == 3  { // for searching file names
+    }else if cli_args[1] == "-s" && cli_args.len() == 3  { // for searching file names and returns a boolean for now
         println!("Search : {}", file_name_list.find(cli_args[2].to_string()));
     }else if cli_args[1] == "-e" && cli_args.len() == 3 { // for editing a file name
         if !files.contains_key(&UniCase::new(cli_args[2].clone())) { // performing a `LOOKUP` in the HashMap for fast search
