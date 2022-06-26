@@ -1,4 +1,4 @@
-use std::{path::{Path, PathBuf}, fs, collections::HashMap, io};
+use std::{path::{Path, PathBuf}, fs, collections::HashMap, io::{self, stdin}};
 
 use unicase::UniCase;
 
@@ -14,8 +14,7 @@ impl FileNames {
         Self { name: p.to_string_lossy().split("/").last().unwrap().to_string(), path: p.to_string_lossy().to_string() }
     }
 }
-
-pub fn read_files(cheat_folder: PathBuf) -> Result<HashMap<UniCase<String>, FileNames>, io::Error> { // returning a vector on success or an error on failure 
+pub fn read_files(cheat_folder: &PathBuf) -> Result<HashMap<UniCase<String>, FileNames>, io::Error> { // returning a vector on success or an error on failure 
     // setting home dir as global variable
     let home_dir = dirs::home_dir().unwrap();
     // create a path to .cheat 
@@ -33,9 +32,7 @@ pub fn read_files(cheat_folder: PathBuf) -> Result<HashMap<UniCase<String>, File
     };
     let target_folder = std::fs::read_dir(cheat_path)?; // passing the `.cheat` psth to be read and enumerated
     let mut res = HashMap::new(); // declaring the vec object
-
     // name to be used as key in the hashmap
-
     for (_, file) in target_folder.enumerate(){  
         let hname = file.as_ref().unwrap().path().to_string_lossy().split("/").last().unwrap().to_string();
         res.insert(UniCase::new(hname), FileNames::new(file.unwrap().path())); // pushing the paths into the vector
@@ -62,6 +59,8 @@ pub fn create_config(config: &Config) -> (bool, PathBuf) {
         },
     };
 }
+
+// checks whether the editor binary exists in the OS
 pub fn check_for_editor(binaries: Vec<&str>, binary_base_path: &PathBuf, selector: &mut Vec<PathBuf>){
     for bin in binaries {
         match Path::new(&binary_base_path).join(bin).exists() {
@@ -72,9 +71,27 @@ pub fn check_for_editor(binaries: Vec<&str>, binary_base_path: &PathBuf, selecto
         }
     }
 }
+// open the files using the chosen editor; bash does the terminal spawning under the hood
 pub fn perform_edit(binary: &PathBuf, file_path: PathBuf) {
     //// when starting the SHELL, you need to spawn a binary then wait for it to finish execution. That is why we are using `spawn` and `wait` 
     let _ = std::process::Command::new(binary).args(&[
         &file_path.to_string_lossy().as_ref()
         ]).spawn().expect("An error occured while performing edit").wait();
+}
+// allows user to choose the editor of their choice and saves it in the config file
+pub fn choose_editor(binaries: Vec<&str>, binary_base_path: &PathBuf, selector: &mut Vec<PathBuf>, config: &mut Config) {
+    let mut editor_selection = String::new();
+    check_for_editor(binaries, &binary_base_path, selector);
+    println!("Please select an editor");
+    for (index, editor) in selector.iter().enumerate() {
+        println!("{}) {:?} ", index + 1, editor); // lists out all the editors found in the system
+    }
+    let mut editor_index = 0; // initializing the variable
+    stdin().read_line(&mut editor_selection).ok().expect("An error occurred while capturing input"); // getting input from user
+    match editor_selection.trim().parse::<usize>() {
+        Ok(num) => { if num < selector.len() + 1 { editor_index = num - 1 } },
+        Err(e) => eprintln!("An error occurred during casting: {}", e)
+    }
+    config.editor_path = Some(selector[editor_index].clone()); // setting the editor
+    fs::write(&config.config_path, serde_json::to_string_pretty(&config).unwrap()).unwrap();
 }

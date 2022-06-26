@@ -1,11 +1,11 @@
-use std::{io::{self, stdin}, path::{PathBuf, Path},vec, process::exit, fs};
+use std::{io::{self}, path::{PathBuf, Path},vec, process::exit, fs};
 use clap::{Parser, Subcommand};
 use serde_json;
 use unicase::UniCase; // this helps with case insensitivity
 mod configuration;
 mod utils;
 
-use utils::{create_config, check_for_editor, perform_edit, read_files};
+use utils::{create_config, perform_edit, read_files, choose_editor};
 
 use crate::configuration::Config;
 
@@ -36,7 +36,17 @@ enum Commands {
     },
 }
 fn main() -> Result<(), io::Error>{
+    // global variables
     let mut config = configuration::Config::new();
+    let home_dir = dirs::home_dir().unwrap();
+    let cheat_folder = Path::new(&home_dir).join(".cheat");
+    let mut files = read_files(&cheat_folder)?; // getting the whole list of files in the directory OR an error
+    let mut selector = vec![];
+    let binary_base_path = PathBuf::from("/usr/bin/");
+    let binaries = vec!["nano", "vi","vim", "nvim", "emacs", "ee"];
+    // command line parsing 
+    let args = Cli::parse();
+
     match create_config(&config){
         (true, path) => {
             // loading configs into program
@@ -52,43 +62,10 @@ fn main() -> Result<(), io::Error>{
         },
         (false, _) => eprintln!("An error occured while creating config file")
     }
-
-    let binary_base_path = PathBuf::from("/usr/bin/");
-    let binaries = vec!["nano", "vi","vim", "nvim", "emacs", "ee"];
-    let args = Cli::parse();
-
-
-    // global cheat path
-    let home_dir = dirs::home_dir().unwrap();
-    let cheat_folder = Path::new(&home_dir).join(".cheat");
-
-
-    let mut files = read_files(cheat_folder)?; // getting the whole list of files in the directory OR an error
-
-    let mut selector = vec![];
-
-    // I need to think whether `Option` was the best choice for this part
     match &config.editor_path {
-        Some(_) => {},
-        None => { 
-            let mut editor_selection = String::new();
-            check_for_editor(binaries, &binary_base_path, &mut selector);
-            println!("Please select an editor");
-            for (index, editor) in selector.iter().enumerate() {
-                println!("{}) {:?} ", index, editor);
-            }
-            let mut editor_index = 0;
-            stdin().read_line(&mut editor_selection).ok().expect("An error occurred while capturing input");
-            match editor_selection.trim().parse::<usize>() {
-                Ok(num) => { editor_index = num },
-                Err(e) => eprintln!("An error occurred during casting: {}", e)
-            }
-            config.editor_path = Some(selector[editor_index].clone()); // setting the editor
-            fs::write(&config.config_path, serde_json::to_string_pretty(&config).unwrap()).unwrap();
-        }
+        Some(editor) => { if !editor.exists(){ choose_editor(binaries, &binary_base_path, &mut selector, &mut config) } }, // checks whether the editor path is set in json file
+        None => { choose_editor(binaries, &binary_base_path, &mut selector, &mut config) } // assumes editor not set in json and forces a set by user
     }
-
-
     match args.command {
         Commands::L {  } => { 
             // let files_content = files.drain();
@@ -101,17 +78,20 @@ fn main() -> Result<(), io::Error>{
             eprintln!("{}", name)
         },
         Commands::E { name } => {
-            if !files.contains_key(&UniCase::new(name.clone())) {
-                eprintln!("The file `{}` does not exist", &name);
+            if !files.contains_key(&UniCase::new(name.clone())) { // performing a `LOOKUP` in the HashMap for fast search
+                // check whether file exists; if not, we create a new one with the prescribed name
+                let new_file = Path::new(&cheat_folder).join(&name); // preparing file name
+                let result = fs::File::create(&new_file); // creating the file
+                match result { // checking whether the create function succeeded
+                    Ok(_) => perform_edit(&config.editor_path.unwrap(), new_file), // if operation succeeds, we open for editing
+                    Err(error) => eprintln!("An error occurred when creating file: {}", error)
+                }
                 exit(1);
             }
-            let p = &files.get(&UniCase::new(name)).unwrap().path;
-            perform_edit(&config.editor_path.unwrap(), PathBuf::from(p));
+            let p = &files.get(&UniCase::new(name)).unwrap().path; // checking whether the file exists in a CASE INSESNITIVE manner
+            perform_edit(&config.editor_path.unwrap(), PathBuf::from(p)); // opening file for edit
         },
-        Commands::S { term } => {
-            eprintln!("{}", term)
-        }
-
+        Commands::S { term } => { eprintln!("{}", term) }
     }
     Ok(())
 }
