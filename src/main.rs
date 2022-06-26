@@ -8,7 +8,7 @@ use tries::TrieStructure;
 
 use utils::{create_config, perform_edit, read_files, choose_editor, perform_text_dump};
 
-use crate::configuration::Config;
+use crate::{configuration::Config};
 
 fn main() -> Result<(), io::Error>{
     // global variables
@@ -58,7 +58,8 @@ fn main() -> Result<(), io::Error>{
             println!("{:indent$} {}", &file.1.name, &file.1.path.to_string(), indent=40);
         }
     }else if cli_args[1] == "-s" && cli_args.len() == 3  { // for searching file names and returns a boolean for now
-        println!("Search : {}", file_name_list.find(cli_args[2].to_string()));
+        let (_, partal_filename) = file_name_list.find(cli_args[2].to_string());
+        println!("Partial search: {}", partal_filename);
     }else if cli_args[1] == "-e" && cli_args.len() == 3 { // for editing a file name
         if !files.contains_key(&UniCase::new(cli_args[2].clone())) { // performing a `LOOKUP` in the HashMap for fast search
             // check whether file exists; if not, we create a new one with the prescribed name

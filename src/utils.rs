@@ -1,4 +1,4 @@
-use std::{path::{Path, PathBuf}, fs, collections::HashMap, io::{self, stdin}};
+use std::{path::{Path, PathBuf}, fs, collections::{HashMap}, io::{self, stdin}};
 
 use unicase::UniCase;
 

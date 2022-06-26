@@ -1,6 +1,6 @@
 use std::{collections::HashMap};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TriesNode {
     pub value: Option<char>,
     pub is_final: bool,
@@ -29,7 +29,7 @@ impl TriesNode {
 
 
 // trie structure
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TrieStructure {
     pub root_node: TriesNode
 }
@@ -65,17 +65,18 @@ impl TrieStructure {
         }
     }
     #[allow(unused)]
-    pub fn find(&mut self, file_name: String) -> bool {
+    pub fn find(&mut self, file_name: String) -> (bool, String) {
+        let mut container = String::new();
         let mut current_node = &mut self.root_node;
         let list_of_characters: Vec<char> = file_name.chars().collect();
         for counter in 0..list_of_characters.len() {
-            if !current_node.child_nodes.contains_key(&list_of_characters[counter]){
-                return false;
+            if !&current_node.child_nodes.contains_key(&list_of_characters[counter]){
+                return (false, String::new());
             }else{
+                container.push(current_node.clone().value.unwrap_or_default());
                 current_node = current_node.child_nodes.get_mut(&list_of_characters[counter]).unwrap();
             }
         }
-        println!("{:?}", current_node);
-        return true;
+        return (true, container);
     }
 }
