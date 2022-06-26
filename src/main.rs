@@ -43,7 +43,7 @@ fn main() -> Result<(), io::Error>{
             match fs::read_to_string(&path) {
                 Ok(content) => {
                     let conf_text: Config = serde_json::from_str(&content).unwrap();
-                    println!("{:?}", conf_text.config_path);
+                    config = conf_text;
                 },
                 Err(_) => eprintln!("The config file is empty")
             }
@@ -69,7 +69,7 @@ fn main() -> Result<(), io::Error>{
 
     // I need to think whether `Option` was the best choice for this part
     match &config.editor_path {
-        Some(path) => {eprintln!("We have a path {:?}", path)},
+        Some(_) => {},
         None => { 
             let mut editor_selection = String::new();
             check_for_editor(binaries, &binary_base_path, &mut selector);
