@@ -3,6 +3,8 @@ use serde_json;
 use unicase::UniCase; // this helps with case insensitivity
 mod configuration;
 mod utils;
+mod tries;
+use tries::TrieStructure;
 
 use utils::{create_config, perform_edit, read_files, choose_editor, perform_text_dump};
 
@@ -39,16 +41,24 @@ fn main() -> Result<(), io::Error>{
         Some(editor) => { if !editor.exists(){ choose_editor(binaries, &binary_base_path, &mut selector, &mut config) } }, // checks whether the editor path is set in json file
         None => { choose_editor(binaries, &binary_base_path, &mut selector, &mut config) } // assumes editor not set in json and forces a set by user
     }
+
+    // implementing the trie structure for quick file search
+
+    let mut file_name_list = TrieStructure::new();
+    for file_name in &files {
+        file_name_list.insert(file_name.0.to_string());
+    }
+
     // parsing command line arguments
     if cli_args.len() < 2 {
         println!("There are no arguments passed"); // put a menu
     }
     if cli_args[1] == "-l" && cli_args.len() == 2 { // for listing all the file names in the .cheat folder
-        for file in files.drain() { // looping through HashMap contents
+        for file in &files { // looping through HashMap contents
             println!("{:indent$} {}", &file.1.name, &file.1.path.to_string(), indent=40);
         }
     }else if cli_args[1] == "-s" && cli_args.len() == 3  { // for searching file names
-        todo!()
+        println!("Search : {}", file_name_list.find(cli_args[2].to_string()));
     }else if cli_args[1] == "-e" && cli_args.len() == 3 { // for editing a file name
         if !files.contains_key(&UniCase::new(cli_args[2].clone())) { // performing a `LOOKUP` in the HashMap for fast search
             // check whether file exists; if not, we create a new one with the prescribed name
@@ -63,10 +73,16 @@ fn main() -> Result<(), io::Error>{
         let p = &files.get(&UniCase::new(cli_args[2].clone())).unwrap().path; // checking whether the file exists in a CASE INSESNITIVE manner
         perform_edit(&config.editor_path.unwrap(), PathBuf::from(p)); // opening file for edit
     }else if cli_args[1] == "-d" && cli_args.len() == 3 {
-        todo!()
-    }else{
-        let file_to_open = Path::new(&cheat_folder).join(&cli_args[1]); // preparing file name
-        println!("{}", perform_text_dump(&file_to_open));
+        let file_to_delete = &files.get(&UniCase::new(cli_args[2].clone())).unwrap().path;
+        let d_res = fs::remove_file(PathBuf::from(file_to_delete));
+        match d_res {
+            Ok(_) => eprintln!("Deleted the file: {}", &file_to_delete),
+            Err(err) => eprintln!("Error deleting file {}: {}", &file_to_delete, err)
+        }
+        
+    }else{ // dumps contents of a file onto the screen
+        let file_to_dump = &files.get(&UniCase::new(cli_args[1].clone())).unwrap().path;
+        print!("{}", perform_text_dump(&PathBuf::from(file_to_dump)));
     }
     Ok(())
 }
