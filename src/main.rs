@@ -79,11 +79,11 @@ fn main() -> Result<(), io::Error>{
         match d_res {
             Ok(_) => eprintln!("Deleted the file: {}", &file_to_delete),
             Err(err) => eprintln!("Error deleting file {}: {}", &file_to_delete, err)
-        }
-        
+        }     
     }else{ // dumps contents of a file onto the screen
-        let file_to_dump = &files.get(&UniCase::new(cli_args[1].clone())).unwrap().path;
-        print!("{}", perform_text_dump(&PathBuf::from(file_to_dump)));
+        if Path::new(&cheat_folder).join(&cli_args[1].clone()).exists() { // checks if file exists
+            print!("{}", perform_text_dump(&PathBuf::from(&files.get(&UniCase::new(cli_args[1].clone())).unwrap().path))); // if it exists, we get it and unwrap it
+        }else{ eprintln!("The file `{}` does not exist", &cli_args[1].clone()) } // we print out an error
     }
     Ok(())
 }
