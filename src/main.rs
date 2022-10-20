@@ -21,6 +21,9 @@ fn main() -> Result<(), io::Error>{
     let binaries = vec!["nano", "vi","vim", "nvim", "emacs", "ee"];
     // getting commandline arguments 
     let cli_args: Vec<String> = env::args().collect();
+    if cli_args.len() == 0 {
+        println!("too few arguments");
+    }
     // creating a config file if it did not exist 
     match create_config(&config){
         (true, path) => {
@@ -52,8 +55,20 @@ fn main() -> Result<(), io::Error>{
     // parsing command line arguments
     if cli_args.len() < 2 {
         println!("There are no arguments passed"); // put a menu
+        println!();
+        println!("      == USAGE ==         ");
+        println!();
+        println!("  -l  -   List all files  ");
+        println!();
+        println!("  -e  -   Edit a file     ");
+        println!();
+        println!("  -s  -   Search a file   ");
+        println!();
+        println!("  -d  -   Delete a file   ");
+        println!();
+        exit(1);
     }
-    if cli_args[1] == "-l" && cli_args.len() == 2 { // for listing all the file names in the .cheat folder
+    if cli_args.len() == 2 && cli_args[1] == "-l" { // for listing all the file names in the .cheat folder
         for file in &files { // looping through HashMap contents
             println!("{:indent$} {}", &file.1.name, &file.1.path.to_string(), indent=40);
         }
