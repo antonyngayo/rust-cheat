@@ -4,6 +4,7 @@ use unicase::UniCase; // this helps with case insensitivity
 mod configuration;
 mod utils;
 mod tries;
+
 use tries::TrieStructure;
 
 use utils::{create_config, perform_edit, read_files, choose_editor, perform_text_dump};

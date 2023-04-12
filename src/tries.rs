@@ -57,7 +57,6 @@ impl TrieStructure {
             current_node.is_final = true;
         }else {
             for new_counter in last_match..list_of_characters.len() {
-                // println!("Inserting {} into {:?}", &list_of_characters[new_counter], current_node.value.unwrap_or_default());
                 current_node.insert_value(list_of_characters[new_counter], false);
                 current_node = current_node.child_nodes.get_mut(&list_of_characters[new_counter]).unwrap();
             }
@@ -77,6 +76,7 @@ impl TrieStructure {
                 current_node = current_node.child_nodes.get_mut(&list_of_characters[counter]).unwrap();
             }
         }
+        println!("Match: {:#?}", &current_node);
         return (true, container);
     }
 }
