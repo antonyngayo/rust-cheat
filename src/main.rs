@@ -4,12 +4,13 @@ use unicase::UniCase; // this helps with case insensitivity
 mod configuration;
 mod utils;
 mod tries;
+mod gitops;
 
 use tries::TrieStructure;
 
 use utils::{create_config, perform_edit, read_files, choose_editor, perform_text_dump};
 
-use crate::{configuration::Config};
+use crate::configuration::Config;
 
 fn main() -> Result<(), io::Error>{
     // global variables
@@ -67,6 +68,8 @@ fn main() -> Result<(), io::Error>{
         println!();
         println!("  -d  -   Delete a file   ");
         println!();
+        println!("  -p  -   Push to git     ");
+        println!();
         exit(1);
     }
     if cli_args.len() == 2 && cli_args[1] == "-l" { // for listing all the file names in the .cheat folder
@@ -96,10 +99,16 @@ fn main() -> Result<(), io::Error>{
             Ok(_) => eprintln!("Deleted the file: {}", &file_to_delete),
             Err(err) => eprintln!("Error deleting file {}: {}", &file_to_delete, err)
         }     
-    }else{ // dumps contents of a file onto the screen
+    }
+    else if cli_args[1] == "-p" && cli_args.len() == 3 {
+        println!("Pushing to git");
+        gitops::git::git_add(&cheat_folder.to_string_lossy().to_string(), &cli_args[2].clone());
+    } 
+    else{ // dumps contents of a file onto the screen
         if Path::new(&cheat_folder).join(&cli_args[1].clone()).exists() { // checks if file exists
             print!("{}", perform_text_dump(&PathBuf::from(&files.get(&UniCase::new(cli_args[1].clone())).unwrap().path))); // if it exists, we get it and unwrap it
         }else{ eprintln!("The file `{}` does not exist", &cli_args[1].clone()) } // we print out an error
     }
+
     Ok(())
 }
