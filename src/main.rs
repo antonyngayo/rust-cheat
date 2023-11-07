@@ -68,7 +68,7 @@ fn main() -> Result<(), io::Error>{
         println!();
         println!("  -d  -   Delete a file   ");
         println!();
-        println!("  -p  -   Push to git     ");
+        println!("  -p  [Commit Message ]-   Push to git ");
         println!();
         exit(1);
     }
