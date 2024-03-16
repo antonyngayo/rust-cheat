@@ -13,7 +13,7 @@ mod tries;
 mod utils;
 
 use crate::configuration::Config;
-use tries::TrieStructure;
+// use tries::TrieStructure;
 use utils::{choose_editor, create_config, perform_edit, perform_text_dump, read_files};
 
 #[derive(Parser, Debug)]
@@ -30,10 +30,14 @@ enum Command {
     List,
     Edit {
         #[clap(short = 'e', long = "edit")]
+        flag: bool,
+
         file_name: String,
     },
     Read {
         #[clap(short = 'r', long = "read")]
+        flag: bool,
+
         file_name: String,
     },
 }
@@ -73,17 +77,25 @@ fn main() -> Result<(), io::Error> {
                 Some(editor) => {
                     if !editor.exists() {
                         choose_editor(binaries, &binary_base_path, &mut selector, &mut config)
+                            .unwrap()
                     }
                 } // checks whether the editor path is set in json file
-                None => choose_editor(binaries, &binary_base_path, &mut selector, &mut config), // assumes editor not set in json and forces a set by user
+                None => {
+                    match choose_editor(binaries, &binary_base_path, &mut selector, &mut config) {
+                        Ok(_) => (),
+                        Err(error) => {
+                            eprintln!("An error occured while choosing an editor: {error}")
+                        }
+                    }
+                }
             }
 
             // implementing the trie structure for quick file search
 
-            let mut file_name_list = TrieStructure::new();
-            for file_name in &files {
-                file_name_list.insert(file_name.0.to_string());
-            }
+            // let mut file_name_list = TrieStructure::new();
+            // for file_name in &files {
+            //     file_name_list.insert(file_name.0.to_string());
+            // }
         }
         Command::List => {
             for file in &files {
@@ -96,7 +108,12 @@ fn main() -> Result<(), io::Error> {
                 );
             }
         }
-        Command::Edit { file_name } => {
+        Command::Edit {
+            mut flag,
+            file_name,
+        } => {
+            flag = true;
+            assert!(flag == true);
             if !files.contains_key(&UniCase::new(file_name.clone())) {
                 // performing a `LOOKUP` in the HashMap for fast search
                 // check whether file exists; if not, we create a new one with the prescribed name
@@ -110,17 +127,30 @@ fn main() -> Result<(), io::Error> {
             } else {
                 let file_path =
                     PathBuf::from(files.get(&UniCase::new(file_name)).unwrap().path.clone());
-                perform_edit(&config.editor_path.as_ref().unwrap(), file_path);
+                match config.editor_path.as_ref() {
+                    Some(editor) => perform_edit(&editor, file_path),
+                    None => {
+                        match choose_editor(binaries, &binary_base_path, &mut selector, &mut config)
+                        {
+                            Ok(_) => perform_edit(&config.editor_path.as_ref().unwrap(), file_path),
+                            Err(error) => {
+                                eprintln!("An error occured while choosing an editor: {error}")
+                            }
+                        }
+                    }
+                }
             }
         }
-        Command::Read { file_name } => match files.get(&UniCase::new(file_name.clone())) {
+        Command::Read { flag, file_name } => match files.get(&UniCase::new(file_name.clone())) {
             None => {
                 eprintln!("The file does not exist");
-                std::process::exit(1);
             }
-            Some(file_name) => {
-                perform_text_dump(&PathBuf::from(&file_name.path));
-            }
+            Some(file_name) => match perform_text_dump(&PathBuf::from(&file_name.path)) {
+                Ok(_) => {
+                    assert!(flag == true)
+                }
+                Err(error) => println!("Unable to read file: {error}"),
+            },
         },
     }
     Ok(())

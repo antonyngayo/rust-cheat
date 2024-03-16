@@ -1,10 +1,11 @@
 use std::{
     collections::HashMap,
     fs,
-    io::{self, stdin},
+    io::{self, stdin, Write},
     path::{Path, PathBuf},
 };
 
+use color_eyre::eyre::Context;
 use unicase::UniCase;
 
 use crate::configuration::Config;
@@ -105,12 +106,20 @@ pub fn perform_edit(binary: &PathBuf, file_path: PathBuf) {
         .wait();
 }
 // open the files using the chosen editor; bash does the terminal spawning under the hood
-pub fn perform_text_dump(file_path: &PathBuf) {
-    let f = fs::read(&file_path);
-    // reading the file and writing it to the terminal
-    std::io::Write::write_all(&mut std::io::stdout(), &f.unwrap()).unwrap();
-    // flushing the buffer
-    std::io::Write::flush(&mut std::io::stdout()).unwrap();
+pub fn perform_text_dump(file_path: &PathBuf) -> anyhow::Result<()> {
+    let buff = fs::read(&file_path)?;
+    let out = std::io::stdout();
+    let mut out = out.lock();
+    match out
+        .write_all(&buff)
+        .context("write contents of file to stdout")
+    {
+        Ok(_) => {}
+        Err(error) => {
+            println!("Error reading file {error}")
+        }
+    }
+    Ok(())
 }
 
 // allows user to choose the editor of their choice and saves it in the config file
@@ -119,7 +128,7 @@ pub fn choose_editor(
     binary_base_path: &PathBuf,
     selector: &mut Vec<PathBuf>,
     config: &mut Config,
-) {
+) -> anyhow::Result<()> {
     let mut editor_selection = String::new();
     check_for_editor(binaries, &binary_base_path, selector);
     println!("Please select an editor");
@@ -143,6 +152,6 @@ pub fn choose_editor(
     fs::write(
         &config.config_path,
         serde_json::to_string_pretty(&config).unwrap(),
-    )
-    .unwrap();
+    )?;
+    Ok(())
 }
