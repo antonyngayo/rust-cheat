@@ -7,7 +7,7 @@ pub fn git_add(cheat_dir: &str, commit_msg: &str){
     let p = cheat_dir.to_string() + "/";
     let path = Path::new(&p);
     if path.exists() {
-        cmd.args(&["-C", &path.to_string_lossy(),"fetch", "--prune", "origin", "master"]);
+        cmd.args(["-C", &path.to_string_lossy(),"fetch", "--prune", "origin", "master"]);
         eprintln!("[INFO] Fetching changes from remote from origin/master");
         match cmd.output() {
             Ok(output) => {
@@ -42,7 +42,7 @@ pub fn git_add(cheat_dir: &str, commit_msg: &str){
                                     Ok(message) => {
                                         if !message.status.success() {
                                             let msg = String::from_utf8(message.stderr.to_vec()).unwrap();
-                                            if message.stderr.len() != 0 {
+                                            if !message.stderr.is_empty() {
                                                 eprintln!("[ERROR] An error occured while [1. committing] files: {:?}", message.stderr);
                                                 return;
                                             }

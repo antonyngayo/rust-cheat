@@ -1,12 +1,11 @@
 use std::{io::{self}, path::{PathBuf, Path},vec, process::exit, fs, env};
-use serde_json;
 use unicase::UniCase; // this helps with case insensitivity
 mod configuration;
 mod utils;
-mod tries;
+// mod tries;
 mod gitops;
 
-use tries::TrieStructure;
+// use tries::TrieStructure;
 
 use utils::{create_config, perform_edit, read_files, choose_editor, perform_text_dump};
 
@@ -23,7 +22,7 @@ fn main() -> Result<(), io::Error>{
     let binaries = vec!["nano", "vi","vim", "nvim", "emacs", "ee"];
     // getting commandline arguments 
     let cli_args: Vec<String> = env::args().collect();
-    if cli_args.len() == 0 {
+    if cli_args.is_empty() {
         println!("too few arguments");
     }
     // creating a config file if it did not exist 
@@ -49,10 +48,10 @@ fn main() -> Result<(), io::Error>{
 
     // implementing the trie structure for quick file search
 
-    let mut file_name_list = TrieStructure::new();
-    for file_name in &files {
-        file_name_list.insert(file_name.0.to_string());
-    }
+    // let mut file_name_list = TrieStructure::new();
+    // for file_name in &files {
+    //     file_name_list.insert(file_name.0.to_string());
+    // }
 
     // parsing command line arguments
     if cli_args.len() < 2 {
@@ -76,10 +75,12 @@ fn main() -> Result<(), io::Error>{
         for file in &files { // looping through HashMap contents
             println!("{:indent$} {}", &file.1.name, &file.1.path.to_string(), indent=40);
         }
-    }else if cli_args[1] == "-s" && cli_args.len() == 3  { // for searching file names and returns a boolean for now
-        let (_, partal_filename) = file_name_list.find(cli_args[2].to_string());
-        println!("Partial search: {}", partal_filename);
-    }else if cli_args[1] == "-e" && cli_args.len() == 3 { // for editing a file name
+    }
+    // else if cli_args[1] == "-s" && cli_args.len() == 3  { // for searching file names and returns a boolean for now
+    //     let (_, partal_filename) = file_name_list.find(cli_args[2].to_string());
+    //     println!("Partial search: {}", partal_filename);
+    // }
+    else if cli_args[1] == "-e" && cli_args.len() == 3 { // for editing a file name
         if !files.contains_key(&UniCase::new(cli_args[2].clone())) { // performing a `LOOKUP` in the HashMap for fast search
             // check whether file exists; if not, we create a new one with the prescribed name
             let new_file = Path::new(&cheat_folder).join(&cli_args[2]); // preparing file name
@@ -102,10 +103,10 @@ fn main() -> Result<(), io::Error>{
     }
     else if cli_args[1] == "-p" && cli_args.len() == 3 {
         println!("Pushing to git");
-        gitops::git::git_add(&cheat_folder.to_string_lossy().to_string(), &cli_args[2].clone());
+        gitops::git::git_add(cheat_folder.to_string_lossy().as_ref(), &cli_args[2]);
     } 
     else{ // dumps contents of a file onto the screen
-        if Path::new(&cheat_folder).join(&cli_args[1].clone()).exists() { // checks if file exists
+        if Path::new(&cheat_folder).join(&cli_args[1]).exists() { // checks if file exists
             print!("{}", perform_text_dump(&PathBuf::from(&files.get(&UniCase::new(cli_args[1].clone())).unwrap().path))); // if it exists, we get it and unwrap it
         }else{ eprintln!("The file `{}` does not exist", &cli_args[1].clone()) } // we print out an error
     }
