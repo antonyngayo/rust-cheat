@@ -7,9 +7,9 @@ use std::{
 };
 use unicase::UniCase; // this helps with case insensitivity
 mod configuration;
-mod utils;
-// mod tries;
 mod gitops;
+mod trie;
+mod utils;
 
 // use tries::TrieStructure;
 
