@@ -97,9 +97,9 @@ fn main() -> Result<(), io::Error> {
         // populate the trie with the names of the files in the .cheat folder
         let mut trie = Trie::new();
         for file_name in &files {
-            trie.insert(&file_name.1.name);
+            trie.insert(&UniCase::new(&file_name.1.name));
         }
-        for hit in trie.search(&cli_args[2]) {
+        for hit in trie.search(&UniCase::new(&cli_args[2])) {
             println!(
                 "{:indent$} {:?}",
                 hit,
