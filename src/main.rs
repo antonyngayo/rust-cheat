@@ -5,6 +5,7 @@ use std::{
     process::exit,
     vec,
 };
+use trie::tt::Trie;
 use unicase::UniCase; // this helps with case insensitivity
 mod configuration;
 mod gitops;
@@ -92,12 +93,21 @@ fn main() -> Result<(), io::Error> {
                 indent = 40
             );
         }
-    }
-    // else if cli_args[1] == "-s" && cli_args.len() == 3  { // for searching file names and returns a boolean for now
-    //     let (_, partal_filename) = file_name_list.find(cli_args[2].to_string());
-    //     println!("Partial search: {}", partal_filename);
-    // }
-    else if cli_args[1] == "-e" && cli_args.len() == 3 {
+    } else if cli_args[1] == "-s" && cli_args.len() == 3 {
+        // populate the trie with the names of the files in the .cheat folder
+        let mut trie = Trie::new();
+        for file_name in &files {
+            trie.insert(&file_name.1.name);
+        }
+        for hit in trie.search(&cli_args[2]) {
+            println!(
+                "{:indent$} {:?}",
+                hit,
+                files.get(&UniCase::new(hit.clone())).unwrap().path,
+                indent = 20
+            )
+        }
+    } else if cli_args[1] == "-e" && cli_args.len() == 3 {
         // for editing a file name
         if !files.contains_key(&UniCase::new(cli_args[2].clone())) {
             // performing a `LOOKUP` in the HashMap for fast search
