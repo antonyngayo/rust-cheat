@@ -94,19 +94,22 @@ fn main() -> Result<(), io::Error> {
             );
         }
     } else if cli_args[1] == "-s" && cli_args.len() == 3 {
-        // populate the trie with the names of the files in the .cheat folder
+        // create an instance of the Trie
         let mut trie = Trie::new();
-        for file_name in &files {
-            trie.insert(&UniCase::new(&file_name.1.name));
-        }
-        for hit in trie.search(&UniCase::new(&cli_args[2])) {
-            println!(
-                "{:indent$} {:?}",
-                hit,
-                files.get(&UniCase::new(hit.clone())).unwrap().path,
-                indent = 20
-            )
-        }
+        // populate the trie with the names of the files in the .cheat folder
+        files
+            .iter()
+            .for_each(|file_name| trie.insert(&UniCase::new(&file_name.1.name)));
+        trie.search(&UniCase::new(&cli_args[2]))
+            .iter()
+            .for_each(|hit| {
+                println!(
+                    "{:indent$} {:?}",
+                    hit,
+                    files.get(&UniCase::new(hit.clone())).unwrap().path,
+                    indent = 40
+                )
+            });
     } else if cli_args[1] == "-e" && cli_args.len() == 3 {
         // for editing a file name
         if !files.contains_key(&UniCase::new(cli_args[2].clone())) {
