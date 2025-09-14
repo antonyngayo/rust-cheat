@@ -31,31 +31,31 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// List all cheat sheet files
-    #[command(alias = "l")]
+    #[command(alias = "-l")]
     List,
     /// Edit a cheat sheet file
-    #[command(alias = "e")]
+    #[command(alias = "-e")]
     Edit {
         /// Name of the file to edit
         filename: String,
     },
     /// Search for cheat sheet files by name
-    #[command(alias = "s")]
+    #[command(alias = "-s")]
     Search {
         /// Search query
         query: String,
     },
     /// Interactive fuzzy finder
-    #[command(alias = "f")]
+    #[command(alias = "-f")]
     Find,
     /// Delete a cheat sheet file
-    #[command(alias = "d")]
+    #[command(alias = "-d")]
     Delete {
         /// Name of the file to delete
         filename: String,
     },
     /// Push changes to git repository
-    #[command(alias = "p")]
+    #[command(alias = "-p")]
     Push {
         /// Commit message
         #[arg(short, long)]
